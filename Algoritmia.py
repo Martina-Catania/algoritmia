@@ -41,13 +41,14 @@ def userTurn(prolog):
             print("Invalid spell, please try again\n")
     
     spellData = prologSpellAux(prolog, spell)
-    castSpell(spell, "YOU", spellData)
+    return castSpell(spell, "YOU", spellData)
 
 def castSpell(spell, turn, spellData):
     #lógica de lanzamiento de spell
     damage = randint(spellData['MinDamage'],spellData['MaxDamage']) #daño aleatorio entre min y max
-    print("YOU casted", spell)
+    print(turn,"casted", spell)
     print("Dealt", damage, "damage")
+    return damage
     #IMPLEMENTAR LÓGICA DE DAÑO AL ENEMIGO/USUARIO
 
 def helpHandler(prolog):
@@ -61,6 +62,14 @@ def helpHandler(prolog):
     print("Deals", spellData['MinDamage'], "to", spellData['MaxDamage'], "damage")
     print("---------------------------------\n")
 
+def enemyTurn(prolog):
+    #lógica de turno del enemigo
+    spellList = ["FIREBALL", "ICE", "LIGHTNING", "SUMMON FROG", "SUMMON DRAGON"]
+    spell = spellList[randint(0,4)]
+    spellData = prologSpellAux(prolog, spell)
+    return castSpell(spell, "BOSS", spellData)
+
+
 def main():
     prolog = setupProlog()
     '''
@@ -68,6 +77,19 @@ def main():
         if spell['Spell'] != "nuke":
             print(f"Spell: {spell['Spell']}, Min Damage: {spell['MinDamage']}, Max Damage: {spell['MaxDamage']}")
     '''
-    userTurn(prolog)
+    userHealth = 100
+    enemyHealth = 100
+    while(userHealth > 0 and enemyHealth > 0):
+        enemyHealth -= userTurn(prolog)
+        print("Enemy health:", enemyHealth)
+        print("\n")
+        if enemyHealth <= 0:
+            if enemyHealth < 0:
+                print("OVERKILL!")
+            print("You win!")
+            break
+        userHealth -= enemyTurn(prolog)
+        print("Your health:", userHealth)
+        print("\n")
 
 main()
