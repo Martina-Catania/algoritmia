@@ -4,8 +4,11 @@ import time
 
 prolog = Prolog()
 prolog.consult("spell_logic.pl")
+prolog.retract("warrior(you, Health)")
+prolog.retract("warrior(boss, Health)")
+prolog.assertz("warrior(you, 100)")
+prolog.assertz("warrior(boss, 100)")
 
-health_dictionary = {warrior["Name"]: warrior["Health"] for warrior in prolog.query("warrior(Name, Health)")}
 
 
 def format_to_print(string):
@@ -15,37 +18,6 @@ def format_to_print(string):
 def format_to_prolog(string):
     #SUMMON FROG -> summon_frog
     return string.replace(" ", "_").lower()
-
-def testPrint():
-    #print warriors
-    warriors = []
-    for warrior in prolog.query("warrior(Name,Health)"):
-        warriors.append(format_to_print(warrior["Name"]))
-    print("Warriors:", warriors)
-    #print todos los spells
-    spells = []
-    for spell in prolog.query("spell(Name)"):
-        spells.append(format_to_print(spell["Name"]))
-    print("Spells: ", spells)
-    #print spells que el usuario puede ver
-    visible_spells = []
-    for spell in prolog.query("can_cast(you, Spell)"):
-        visible_spells.append(format_to_print(spell["Spell"]))
-    print("Visible spells:", visible_spells)
-    #print spells que el usuario puede usar
-    available_spells = visible_spells
-    for spell in (prolog.query("secret(you, Spell)")):
-        available_spells.append(format_to_print(spell["Spell"]))
-    print("Available spells:", available_spells)
-    #print descripcion de un spell
-    for spell in prolog.query("description(Name, Desc)"):
-        print(format_to_print(spell["Name"]),"-", spell["Desc"])
-    #print daño de un spell
-    for spell in prolog.query("damage_range(Name, Min, Max)"):
-        print(format_to_print(spell["Name"]),"deals", spell["Min"], "to", spell["Max"], "damage")
-    #print crit chance de un spell
-    for spell in prolog.query("crit_chance(Name, Chance)"):
-        print(format_to_print(spell["Name"]), "critical hit chance:", spell["Chance"],"%")
 
 def first_turn():
     print("Welcome to the game!")
@@ -103,7 +75,6 @@ def help_handler(visible_spells,secret_spells):
     elif spell in secret_spells: #si el spell es un spell especial
         print("Hey that's a secret!")
         prolog.retract(f"secret(you, {format_to_prolog(spell)})")
-        print_data(spell_data)
     else:
         print("That's not a spell silly!")
         return
@@ -112,42 +83,49 @@ def print_data(spell_data):
     print("-------------------------------------")
     print(format_to_print(spell_data), "-", list(prolog.query(f"description({spell_data}, Desc)"))[0]["Desc"])
     damage = list(prolog.query(f"damage_range({spell_data}, Min, Max)"))
-    print("Deals", damage[0]["Min"], "to", damage[0]["Max"], "damage")
-    print("Critical hit chance:", list(prolog.query(f"crit_chance({spell_data}, Chance)"))[0]["Chance"],"%")
-    #print("Cooldown: ",list(prolog.query(f"can_cast({spell_data}, Cooldown)"))[0]["Cooldown"],"turns")
+    if spell_data == "heal":
+        print("Heals", damage[0]["Min"], "to", damage[0]["Max"], "hp")
+    else:
+        print("Deals", damage[0]["Min"], "to", damage[0]["Max"], "damage")
+    print("Critical chance:", list(prolog.query(f"crit_chance({spell_data}, Chance)"))[0]["Chance"],"%")
     print("-------------------------------------\n")
 
 def cast_spell(spell,caster):
-    #lógica para castear un spell normal
-    spell_data = format_to_prolog(spell)
-    for crit in prolog.query(f"crit_chance({spell_data}, Chance)"):
-        crit_chance = crit["Chance"]
+    #lógica para castear un spell
     crit_modifier = 1
-    target_list = []
-    for target in prolog.query(f"target({spell_data}, {caster}, Target)"):
-        target_list.append(target["Target"])
-    if randint(0,100) < crit_chance:
+    spell_data = format_to_prolog(spell) #formateo nombre del spell para hacer consultas de prolog
+    target_list = [target["Target"] for target in prolog.query(f"target({spell_data}, {caster}, Target)")] #oponente o todos en la batalla
+    # check si es crítico
+    crit_chance = list(prolog.query(f"crit_chance({spell_data}, Chance)"))[0]["Chance"]
+    if randint(0, 100) < crit_chance:
         print("Critical hit!")
-        if spell == "SUMMON FROG":
-            cast_spell("SUMMON DRAGON",caster)
+        if spell == "SUMMON FROG": #easter egg, si el usuario hace un critico con SUMMON FROG, se invoca un dragon
+            print("That's a big frog!")
+            cast_spell("SUMMON DRAGON", caster)
+            return
         else:
             crit_modifier = 2
-    for damage in prolog.query(f"damage_range({spell_data}, Min, Max)"):
-        damage = randint(damage["Min"],damage["Max"])*crit_modifier
-    
-    print(f"{format_to_print(caster)} casted {format_to_print(spell)}")
-    deal_damage(damage,target_list)
+    #calculo daño
+    damage_range = list(prolog.query(f"damage_range({spell_data}, Min, Max)"))[0]
+    damage = randint(damage_range["Min"], damage_range["Max"]) * crit_modifier 
 
-def deal_damage(damage,target_list):
-    global health_dictionary
+    print(f"{format_to_print(caster)} casted {format_to_print(spell)}")
+    #handle daño a los objetivos
     for target in target_list:
-        if target in health_dictionary:
-            health_dictionary[target] -= damage
-            if health_dictionary[target] < 0:
-                health_dictionary[target] = 0
-                print("O V E R K I L L !")
+        #query vida actual
+        current_health = list(prolog.query(f"warrior({target}, Health)"))[0]["Health"]
+        #actualizo vida del objetivo e imprimo
+        prolog.retract(f"warrior({target}, {current_health})")
+        if spell == "HEAL":
+            prolog.assertz(f"warrior({target}, {current_health + damage})")
+            print(f"{format_to_print(target)} healed {damage} hp!")
+        else:
+            prolog.assertz(f"warrior({target}, {current_health - damage})")
             print(f"Dealt {damage} damage to {format_to_print(target)}")
-            print(f"{format_to_print(target)} health: {health_dictionary[target]}")
+        #imprimo resultado
+        print(f"{format_to_print(target)} health: {list(prolog.query(f'warrior({target}, Health)'))[0]['Health']}\n")
+        if list(prolog.query(f"warrior({target}, Health)"))[0]["Health"] < 0:
+            print(f"O V E R K I L L E D\n")
 
 def boss_turn():
     #lógica de turno del enemigo
@@ -163,13 +141,22 @@ def boss_turn():
     cast_spell(spell,"boss")
     return
     
-
 def main():
     first_turn()
-    
-    while(health_dictionary["you"] > 0 and health_dictionary["boss"] > 0):
+    warriors = list(prolog.query(f"warrior(Warrior, Health)"))
+    #loop de juego hasta que alguien se quede sin vida
+    while(warriors[0]["Health"] > 0 and warriors[1]["Health"] > 0):
         boss_turn()
-        
-        if health_dictionary["you"] > 0:
+        warriors = list(prolog.query(f"warrior(Warrior, Health)"))
+        if warriors[0]["Health"] > 0 and warriors[1]["Health"] > 0:
             user_turn()
+            warriors = list(prolog.query(f"warrior(Warrior, Health)"))
+    
+    print("GAME OVER")
+    if warriors[0]["Health"] <= 0 and warriors[1]["Health"] <= 0:
+        print("What even was your plan dude?")
+    elif warriors[0]["Health"] <= 0:
+        print("YOU LOST!")
+    else:
+        print("YOU WON!")
 main()

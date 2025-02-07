@@ -18,6 +18,7 @@ spell(lightning).
 spell(summon_frog).
 spell(summon_dragon).
 spell(nuke).
+spell(heal).
 
 description(fireball, 'Shoot a fireball at your enemy.').
 description(ice, 'Shoot an ice shard at your enemy').
@@ -25,6 +26,7 @@ description(lightning, 'Shoot lightning at your enemy.').
 description(summon_frog, 'Summon a frog, ribbit!').
 description(summon_dragon, 'Thats not a frog!').
 description(nuke, 'Uh oh! You shouldnt use this.').
+description(heal, 'Heal yourself a little bit.').
 
 damage_range(fireball, 20, 50).
 damage_range(ice, 15, 40).
@@ -32,17 +34,33 @@ damage_range(lightning, 25, 60).
 damage_range(summon_frog, 5, 15).
 damage_range(summon_dragon, 99, 99).
 damage_range(nuke, 500, 1000).
+damage_range(heal, 10, 15).
 
 crit_chance(fireball, 20).
 crit_chance(ice, 10).
 crit_chance(lightning, 30).
 crit_chance(summon_frog, 15).
-crit_chance(summon_dragon, 50).
+crit_chance(summon_dragon, 0).
 crit_chance(nuke, 100).
+crit_chance(heal, 15).
 
-target(Spell,Warrior,Opponent) :- spell(Spell), warrior(Warrior,_), opponent(Warrior,Opponent).
-target(nuke,Warrior,Warrior) :- opponent(Warrior,_), warrior(Warrior,_).
+target(Spell,Caster,Opponent) :- spell(Spell), Spell \= heal, warrior(Caster,_), opponent(Caster,Opponent).
+target(nuke,Caster,Caster) :- opponent(Caster,_), warrior(Caster,_).
+target(heal,Caster,Caster) :- warrior(Caster,_),warrior(Caster,_).
 
 secret(you,nuke).
 secret(you,summon_dragon).
 secret(boss,nuke).
+secret(boss,summon_nuke).
+
+trap(trap_key).
+trap(count_trap).
+trap(disable_key).
+
+description(trap_key, 'Lays a trap on one of your keys, youll take damage if you use it in a spell!.').
+description(count_trap, 'Lays a trap on one of your keys, youll take damage if you use it too much in a spell!.').
+description(disable_key, 'Disables one of your keys! You wont be able to cast any spells that need it!.').
+
+damage_range(trap_key, 5,10).
+damage_range(count_trap, 10, 15).
+damage_range(disable_key, 0, 0).
