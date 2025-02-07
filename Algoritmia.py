@@ -27,7 +27,7 @@ def first_turn():
     print("Any spells you type will be casted! Pretty neat huh?")
     print("Why don't you give it a try?\n")
     user_turn()
-    print("\nSeems someone's mad, whoops!")
+    print("Seems someone's mad, whoops!")
     print("Oh well! My job here is done!")
     print("Good luck man!\n")
 
@@ -66,7 +66,7 @@ def user_turn():
     while(valid == False):
         print("Known spells:", visible_spells)
         print("Traps:", traps)
-        print("Type HELP to check a spell's description or SKIP to skip your turn.")
+        print("Type HELP to check a spell's description or SKIP to skip your turn.\n")
         spell = input().upper()
         #lógica para manejar el input del usuario
         if spell == "HELP":
@@ -76,7 +76,7 @@ def user_turn():
             valid = True
         elif spell in traps: #si el spell es una trap
             if len(trap_dictionary["boss"]) < 2:
-                letter = input_trap_letter()
+                letter = input_trap_letter("boss")
                 cast_trap(spell, "you", letter)
                 valid = True
             else:
@@ -94,28 +94,30 @@ def user_turn():
                 print("Invalid spell, try again!")
     return
 
-def input_trap_letter():
+def input_trap_letter(target):
     while True:
-        letter = input("Type a letter to cast the trap: ").lower()
+        letter = input("\nType a letter to cast the trap: ").lower()
         if len(letter) != 1:
             print("Please type a single letter!")
             continue
-        if any(f[1] == letter for f in trap_dictionary["boss"]):
+        if any(f[1] == letter for f in trap_dictionary[target]):
             print(f"The letter {letter} is already trapped!")
             continue
         break
     return letter
 
-def check_disabled(spell, user):
-    is_trapped = False
+def check_disabled(spell, caster):
+    spell_data = format_to_prolog(spell)
+    is_disabled = False
     #check si el spell necesita una letra para ser casted
-    for trap in trap_dictionary[user]:
-        if trap[0] == "disable_key" and trap[1] in spell:
-            print("You can't cast that spell!")
-            is_trapped = True
-    return is_trapped
+    for trap in trap_dictionary[caster]:
+        if trap[0] == "disable_key" and trap[1] in spell_data: #si el spell tiene una letra trappeada
+            print(f"The letter {format_to_print(trap[1])} is disabled!\n")
+            is_disabled = True
+    return is_disabled
 
 def help_handler(visible_spells,secret_spells,traps):
+    print("\nHELP")
     print("Select a spell to see its description")
     spell = input().upper()
     spell_data = format_to_prolog(spell)
@@ -152,7 +154,7 @@ def cast_spell(spell,caster):
     crit_modifier = 1
     spell_data = format_to_prolog(spell) #formateo nombre del spell para hacer consultas de prolog
     target_list = [target["Target"] for target in prolog.query(f"target({spell_data}, {caster}, Target)")] #oponente o todos en la batalla
-    print(f"{format_to_print(caster)} casted {format_to_print(spell)}")
+    print(f"\n{format_to_print(caster)} casted {format_to_print(spell)}")
     # check si es crítico
     crit_chance = list(prolog.query(f"crit_chance({spell_data}, Chance)"))[0]["Chance"]
     if randint(0, 100) < crit_chance:
@@ -181,13 +183,13 @@ def cast_spell(spell,caster):
         #imprimo resultado
         print(f"{format_to_print(target)} health: {list(prolog.query(f'warrior({target}, Health)'))[0]['Health']}\n")
         if list(prolog.query(f"warrior({target}, Health)"))[0]["Health"] < 0:
-            print(f"O V E R K I L L\n")
+            print(f"O V E R K I L L")
 
 def cast_trap(trap, caster, letter):
     valid = False
     trap_data = format_to_prolog(trap)
     target = list(prolog.query(f"target({trap_data}, {caster}, Target)"))[0]["Target"]
-    print(f"{format_to_print(caster)} casted {format_to_print(trap)} on letter {letter.upper()}")
+    print(f"{format_to_print(caster)} casted {format_to_print(trap)} on letter {letter.upper()}\n")
     trap_dictionary[target].append([trap_data, letter])
 
 def check_trap(spell, caster):
@@ -216,13 +218,15 @@ def boss_turn():
     secret_spells = []
     traps = []
     load_spell_lists("boss",visible_spells,secret_spells,traps)
-    if randint(0,100) < 10:
+    '''if randint(0,100) < 10:
         spell = secret_spells[randint(0,len(secret_spells)-1)]
     else:
         spell = visible_spells[randint(0,len(visible_spells)-1)]
     check_trap(spell, "boss") #check si el spell tiene una letra trappeada
     cast_spell(spell,"boss")
-    #cast_trap(traps[0], "boss")
+    #cast_trap(traps[0], "boss")'''
+    letter = input_trap_letter("you")
+    cast_trap(traps[1], "boss", letter)
     return
     
 def main():
