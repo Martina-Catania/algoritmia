@@ -25,14 +25,14 @@ trap(trap_key).
 trap(disable_key).
 
 description(fireball, 'Shoot a fireball at your enemy.').
-description(ice, 'Shoot an ice shard at your enemy').
+description(ice, 'Shoot an ice shard at your enemy.').
 description(lightning, 'Shoot lightning at your enemy.').
 description(summon_frog, 'Summon a frog, ribbit!').
 description(summon_dragon, 'Thats not a frog!').
 description(nuke, 'Uh oh! You shouldnt use this.').
 description(heal, 'Heal yourself a little bit.').
-description(trap_key, 'Lays a trap on one of your opponents keys.').
-description(disable_key, 'Disables one of your opponents keys!.').
+description(trap_key, 'Lays a trap on one of your opponents keys.\nOnly two traps can be active at once.').
+description(disable_key, 'Disables one of your opponents keys!.\nOnly one key can be disabled at once.').
 
 damage_range(fireball, 20, 50).
 damage_range(ice, 15, 40).
@@ -41,13 +41,13 @@ damage_range(summon_frog, 5, 15).
 damage_range(summon_dragon, 99, 99).
 damage_range(nuke, 500, 1000).
 damage_range(heal, 10, 15).
-damage_range(trap_key, 10,10).
+damage_range(trap_key, 15,15).
 damage_range(disable_key, 0, 0).
 
 crit_chance(fireball, 20).
 crit_chance(ice, 10).
 crit_chance(lightning, 30).
-crit_chance(summon_frog, 15).
+crit_chance(summon_frog, 10).
 crit_chance(summon_dragon, 0).
 crit_chance(nuke, 100).
 crit_chance(heal, 15).
