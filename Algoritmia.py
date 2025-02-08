@@ -230,17 +230,47 @@ def boss_turn():
     secret_spells = []
     traps = []
     load_spell_lists("boss",visible_spells,secret_spells,traps)
-    #spells
-    '''if randint(0,100) < 10:
-        spell = secret_spells[randint(0,len(secret_spells)-1)]
-    else:
-        spell = visible_spells[randint(0,len(visible_spells)-1)]
-    check_trap(spell_data, "boss") #check si el spell tiene una letra trappeada
-    cast_spell(spell_data,"boss")'''
-    #traps
-    letter = input_trap_letter("you")
-    cast_trap(format_to_prolog(traps[0]), "boss", letter)
-    #cast_trap(format_to prolog(traps[1]), "boss", letter)
+
+    #is boss one hp?
+    is_1_hp = int(bool(list(prolog.query("is_one_hp(boss)"))))
+    print(f"Boss is at 1 hp: {is_1_hp}")
+    #can boss die to any spells next turn?
+    can_die = int(bool(list(prolog.query("can_die(boss)"))))
+    print(f"Boss can die next turn: {can_die}")
+    #does the boss have 2 active traps?
+    at_trap_limit = int(len(trap_dictionary["you"]) == 2)
+    print(f"Boss is at trap limit: {at_trap_limit}")
+    #has the boss disabled a letter already?
+    has_disabled = int(len(disable_dictionary["you"]) == 1)
+    print(f"Boss has disabled a letter: {has_disabled}")
+
+    print("BOSS' CHOICE")
+    spell_data = list(prolog.query(f"boss_choice(Action,{is_1_hp}, {can_die}, {at_trap_limit}, {has_disabled})"))[0]['Action']
+    print(f"Boss chose {format_to_print(spell_data)}\n")
+    spell = format_to_print(spell_data)
+    if spell in traps: #si el spell es una trap
+            if spell_data == "trap_key" and len(trap_dictionary["you"]) < 2:
+                letter = input_trap_letter("you")
+                cast_trap(spell_data, "boss", letter)
+                trap_dictionary["you"].append([spell_data, letter])
+                valid = True
+            elif spell_data == "disable_key" and len(disable_dictionary["you"]) == 0:
+                letter = input_trap_letter("you")
+                cast_trap(spell_data, "boss", letter)
+                disable_dictionary["you"].append(letter)
+                valid = True
+            else:
+                print("You can't cast more traps!")
+    elif not check_disabled(spell_data, "boss"):
+           if spell in visible_spells or spell in secret_spells:
+               if spell in secret_spells:
+                   print("Hey that's a secret!")
+                   prolog.retract(f"secret(you, {spell_data})")
+               check_trap(spell_data, "boss") #check si el spell tiene una letra trappeada
+               if list(prolog.query(f"warrior(boss, Health)"))[0]["Health"] <= 0:
+                   return
+               cast_spell(spell_data, "boss")
+               valid = True
     return
     
 def main():

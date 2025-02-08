@@ -61,3 +61,25 @@ secret(you,nuke).
 secret(you,summon_dragon).
 secret(boss,nuke).
 secret(boss,summon_dragon).
+
+is_one_hp(Warrior) :- warrior(Warrior,1).
+
+can_die(Warrior) :-
+    warrior(Warrior, HP),
+    damage_range(Spell, _, Max_Dmg),
+    Spell \= heal,
+    \+ secret(Warrior,Spell),
+    HP =< Max_Dmg.
+
+boss_choice(nuke, 1, _, _, _).
+
+boss_choice(heal, 0, 1, _, _).
+
+boss_choice(trap_key, 0, 0, 0, _). 
+
+boss_choice(disable_key, 0, 0, _, 0). 
+
+boss_choice(spell(Spell), 0, 0, _, _) :- 
+    spell(Spell),
+    Spell \= nuke,
+    Spell \= heal.
