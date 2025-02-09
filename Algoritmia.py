@@ -1,16 +1,17 @@
 from pyswip import Prolog
 from random import randint
-import time
 
 prolog = Prolog()
-prolog.consult("spell_logic.pl")
+prolog.consult("spell_logic.pl") #consulto el archivo de prolog
 prolog.retract("warrior(you, Health)")
+#resetear vida de los jugadores
 prolog.retract("warrior(boss, Health)")
 prolog.assertz("warrior(you, 100)")
 prolog.assertz("warrior(boss, 100)")
+#inicializar cooldowns
 list(prolog.query("initialize_cooldowns."))
 
-trap_dictionary = {"you": [], "boss": []} #diccionario de trampas, se guardan en el formato {victima: [trap, letra]}
+trap_dictionary = {"you": [], "boss": []} #diccionario de trampas, se guardan en el formato {victima: letra}
 disable_dictionary = {"you": [], "boss": []} #diccionario letras desactivadas, se guardan en el formato {victima: letra}
 mostCommonLetters = {chr(i): 0 for i in range(97, 123)}  # Diccionario para contar letras a-z
 
@@ -127,7 +128,6 @@ def user_turn():
     cooldowns = {}
     load_spell_lists("you", visible_spells, secret_spells, traps)
     load_cooldowns("you", cooldowns)
-
     valid = False
     while not valid:
         print("\nCAST-------------------------------------------------------------------")
@@ -143,7 +143,6 @@ def user_turn():
             valid = True
         elif spell in traps:
             valid = handle_trap(spell_data, "you", "boss")
-        # elif not check_disabled(spell_data, "you"):
         elif spell in visible_spells or spell in secret_spells:
             if spell in secret_spells:
                 print("Hey that's a secret!")
@@ -164,15 +163,6 @@ def input_trap_letter(target):
             continue
         break
     return letter
-
-def check_disabled(spell_data, caster):
-    is_disabled = False
-    #check si el spell necesita una letra para ser casted
-    for trap in disable_dictionary[caster]:
-        if trap in spell_data: #si el spell tiene una letra trappeada
-            print(f"The letter {format_to_print(trap)} is disabled!\n")
-            is_disabled = True
-    return is_disabled
 
 def help_handler(visible_spells,secret_spells,traps):
     print("\nHELP-------------------------------------------------------------------")
@@ -215,11 +205,11 @@ def print_data(spell_data):
 def cast_spell(spell_data,caster):
     #lógica para castear un spell
     #CHECK SI HAY LETRAS TRAPPEADAS
-    crit_modifier = 1
-    #spell_data = format_to_prolog(spell) #formateo nombre del spell para hacer consultas de prolog
-    target_list = [target["Target"] for target in prolog.query(f"target({spell_data}, {caster}, Target)")] #oponente o todos en la batalla
+    # check el target del spell, puede ser un solo target o una lista de targets
+    target_list = [target["Target"] for target in prolog.query(f"target({spell_data}, {caster}, Target)")]
     print(f"\n{format_to_print(caster)} casted {format_to_print(spell_data)}")
     # check si es crítico
+    crit_modifier = 1
     crit_chance = list(prolog.query(f"crit_chance({spell_data}, Chance)"))[0]["Chance"]
     if randint(0, 100) < crit_chance:
         print("Critical hit!")
@@ -294,9 +284,7 @@ def boss_turn(show_boss_logic):
         print(f"Boss is at trap limit: {at_trap_limit}")
         print(f"Boss has disabled a letter: {has_disabled}")
         print("BOSS' CHOICE")
-        print(possible_actions)
-    
-    possible_actions = list(prolog.query(f"boss_choice(Action,{is_1_hp}, {can_die}, {at_trap_limit}, {has_disabled})"))
+        #print(possible_actions[0])
     
     spell_data = None
     for action in possible_actions:
@@ -307,7 +295,7 @@ def boss_turn(show_boss_logic):
             spell_data = action['Action']
             break
     if spell_data is None:
-        print("Boss skips the turn.\n")
+        print("Boss gave up....\n")
         return
     print(f"Boss chose {format_to_print(spell_data)}\n")
     if not handle_trap(spell_data, "boss", "you"):
