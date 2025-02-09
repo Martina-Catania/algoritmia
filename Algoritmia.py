@@ -117,9 +117,9 @@ def input_trap_letter(target):
 def check_disabled(spell_data, caster):
     is_disabled = False
     #check si el spell necesita una letra para ser casted
-    for trap in trap_dictionary[caster]:
-        if trap[0] == "disable_key" and trap[1] in spell_data: #si el spell tiene una letra trappeada
-            print(f"The letter {format_to_print(trap[1])} is disabled!\n")
+    for trap in disable_dictionary[caster]:
+        if trap in spell_data: #si el spell tiene una letra trappeada
+            print(f"The letter {format_to_print(trap)} is disabled!\n")
             is_disabled = True
     return is_disabled
 
@@ -225,12 +225,6 @@ def check_trap(spell_data, caster):
 def boss_turn():
     #lógica de turno del enemigo
     print("BOSS' TURN")
-    #lista de spells que el boss puede usar
-    visible_spells = []
-    secret_spells = []
-    traps = []
-    load_spell_lists("boss",visible_spells,secret_spells,traps)
-
     #is boss one hp?
     is_1_hp = int(bool(list(prolog.query("is_one_hp(boss)"))))
     print(f"Boss is at 1 hp: {is_1_hp}")
@@ -245,32 +239,30 @@ def boss_turn():
     print(f"Boss has disabled a letter: {has_disabled}")
 
     print("BOSS' CHOICE")
-    spell_data = list(prolog.query(f"boss_choice(Action,{is_1_hp}, {can_die}, {at_trap_limit}, {has_disabled})"))[0]['Action']
+    possible_actions = list(prolog.query(f"boss_choice(Action,{is_1_hp}, {can_die}, {at_trap_limit}, {has_disabled})"))
+    spell_data = possible_actions[0]['Action']
     print(f"Boss chose {format_to_print(spell_data)}\n")
     spell = format_to_print(spell_data)
-    if spell in traps: #si el spell es una trap
-            if spell_data == "trap_key" and len(trap_dictionary["you"]) < 2:
-                letter = input_trap_letter("you")
-                cast_trap(spell_data, "boss", letter)
-                trap_dictionary["you"].append([spell_data, letter])
-                valid = True
-            elif spell_data == "disable_key" and len(disable_dictionary["you"]) == 0:
-                letter = input_trap_letter("you")
-                cast_trap(spell_data, "boss", letter)
-                disable_dictionary["you"].append(letter)
-                valid = True
-            else:
-                print("You can't cast more traps!")
-    elif not check_disabled(spell_data, "boss"):
-           if spell in visible_spells or spell in secret_spells:
-               if spell in secret_spells:
-                   print("Hey that's a secret!")
-                   prolog.retract(f"secret(you, {spell_data})")
-               check_trap(spell_data, "boss") #check si el spell tiene una letra trappeada
-               if list(prolog.query(f"warrior(boss, Health)"))[0]["Health"] <= 0:
-                   return
-               cast_spell(spell_data, "boss")
-               valid = True
+    #si el spell es una trap
+    if spell_data == "trap_key" and len(trap_dictionary["you"]) < 2:
+        letter = input_trap_letter("you")
+        cast_trap(spell_data, "boss", letter)
+        trap_dictionary["you"].append([spell_data, letter])
+    elif spell_data == "disable_key" and len(disable_dictionary["you"]) == 0:
+        letter = input_trap_letter("you")
+        cast_trap(spell_data, "boss", letter)
+        disable_dictionary["you"].append(letter)
+    else:
+       valid = False
+       while not valid:
+           i = randint(0, len(possible_actions) - 1)
+           valid = check_disabled(spell_data, "boss")
+           spell_data = possible_actions[i]['Action']
+           check_trap(spell_data, "boss") #check si el spell tiene una letra trappeada
+           if list(prolog.query(f"warrior(boss, Health)"))[0]["Health"] <= 0:
+                return
+           cast_spell(spell_data, "boss")
+           valid = True
     return
     
 def main():
@@ -281,6 +273,8 @@ def main():
     while(warriors[0]["Health"] > 0 and warriors[1]["Health"] > 0):
         boss_turn()
         warriors = list(prolog.query(f"warrior(Warrior, Health)")) #actualizo vida de los jugadores
+        print("Trapped keys:", trap_dictionary)
+        print("Disabled keys:", disable_dictionary)
         if warriors[0]["Health"] > 0 and warriors[1]["Health"] > 0: #si ambos siguen vivos, turno del usuario
             user_turn()
             warriors = list(prolog.query(f"warrior(Warrior, Health)")) #actualizo vida de los jugadores
