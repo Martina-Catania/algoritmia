@@ -121,7 +121,7 @@ def handle_cast(spell_data, caster):
     return True
 
 def user_turn():
-    print("YOUR TURN")
+    print("----YOUR TURN-------------------------------------------------------------------")
     visible_spells = []
     secret_spells = []
     traps = []
@@ -130,8 +130,8 @@ def user_turn():
     load_cooldowns("you", cooldowns)
     valid = False
     while not valid:
-        print("\nCAST-------------------------------------------------------------------")
-        print("Known spells:", [f"{spell} (CD: {cooldowns[format_to_prolog(spell)]})" for spell in visible_spells])
+        #print("\nCAST-------------------------------------------------------------------")
+        print("\nKnown spells:", [f"{spell} (CD: {cooldowns[format_to_prolog(spell)]})" for spell in visible_spells])
         print("Traps:", traps)
         print("Type HELP to check a spell's description or SKIP to skip your turn.\n")
         spell = input().upper()
@@ -139,7 +139,7 @@ def user_turn():
         if spell == "HELP":
             help_handler(visible_spells, secret_spells, traps)
         elif spell == "SKIP":
-            print("Skipping turn...")
+            print("Skipping turn...\n")
             valid = True
         elif spell in traps:
             valid = handle_trap(spell_data, "you", "boss")
@@ -149,7 +149,7 @@ def user_turn():
                 prolog.retract(f"secret(you, {spell_data})")
             valid = handle_cast(spell_data, "you")
         else:
-            print("Invalid spell, try again!")
+            print("Invalid spell, try again!\n")
     return
 
 def input_trap_letter(target):
@@ -263,7 +263,7 @@ def check_trap(spell_data, caster):
                 print(f"Did {caster} just die to a trap?\n")
 
 def boss_turn(show_boss_logic):
-    print("BOSS' TURN")
+    print("----BOSS TURN-------------------------------------------------------------------")
     is_1_hp = int(bool(list(prolog.query("is_one_hp(boss)"))))
     can_die = int(bool(list(prolog.query("can_die(boss)"))))
     at_trap_limit = int(len(trap_dictionary["you"]) == 2)
@@ -316,6 +316,7 @@ def main():
         warriors = list(prolog.query(f"warrior(Warrior, Health)")) #actualizo vida de los jugadores
         print("Trapped keys:", trap_dictionary)
         print("Disabled keys:", disable_dictionary)
+        print("\n")
         list(prolog.query("update_cooldowns."))
         if warriors[0]["Health"] > 0 and warriors[1]["Health"] > 0:
             user_turn()
