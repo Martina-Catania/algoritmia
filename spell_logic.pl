@@ -81,9 +81,9 @@ boss_choice(heal, 0, 1, _, _).
 
 boss_choice(trap_key, 0, 0, 0, _). 
 
-boss_choice(disable_key, 0, 0, _, 0). 
+boss_choice(disable_key, 0, _, _, 0).
 
-boss_choice(Spell, 0, 0, _, _) :- 
+boss_choice(Spell, 0, _, _, _) :- 
     spell(Spell),
     Spell \= nuke,
     Spell \= heal.
