@@ -11,10 +11,17 @@ prolog.assertz("warrior(boss, 100)")
 
 trap_dictionary = {"you": [], "boss": []} #diccionario de trampas, se guardan en el formato {victima: [trap, letra]}
 disable_dictionary = {"you": [], "boss": []} #diccionario letras desactivadas, se guardan en el formato {victima: letra}
+mostCommonLetters = {chr(i): 0 for i in range(97, 123)}  # Diccionario para contar letras a-z
+
+def update_letter_count(string):
+    for char in string.lower():
+        if char in mostCommonLetters:
+            mostCommonLetters[char] += 1
 
 def format_to_print(string):
     #summon_frog -> SUMMON FROG
     return " ".join(string.split("_")).upper()
+
 
 def format_to_prolog(string):
     #SUMMON FROG -> summon_frog
@@ -97,6 +104,7 @@ def user_turn():
                 if list(prolog.query(f"warrior(you, Health)"))[0]["Health"] <= 0:
                     return
                 cast_spell(spell_data, "you")
+                update_letter_count(spell)
                 valid = True
             else:
                 print("Invalid spell, try again!")
@@ -240,31 +248,50 @@ def boss_turn():
 
     print("BOSS' CHOICE")
     possible_actions = list(prolog.query(f"boss_choice(Action,{is_1_hp}, {can_die}, {at_trap_limit}, {has_disabled})"))
-    spell_data = possible_actions[0]['Action']
+    
+    def choose_letter():
+        sorted_letters = sorted(mostCommonLetters.items(), key=lambda item: item[1], reverse=True)
+        for letter, _ in sorted_letters:
+            if letter not in [item[1] for item in trap_dictionary["you"]] and letter not in disable_dictionary["you"]:
+                return letter
+        return chr(randint(97, 122))  # if all letters are used, choose a random letter
+
+    def is_valid_spell(spell_data):
+        for letter in disable_dictionary["boss"]:
+            if letter in spell_data:
+                return False
+        return True
+
+    spell_data = None
+    for action in possible_actions:
+        if is_valid_spell(action['Action']):
+            spell_data = action['Action']
+            break
+
+    if spell_data is None:
+        print("Boss skips the turn.\n")
+        return
+
     print(f"Boss chose {format_to_print(spell_data)}\n")
     spell = format_to_print(spell_data)
+
     #si el spell es una trap
     if spell_data == "trap_key" and len(trap_dictionary["you"]) < 2:
-        letter = input_trap_letter("you")
+        letter = choose_letter()
         cast_trap(spell_data, "boss", letter)
         trap_dictionary["you"].append([spell_data, letter])
     elif spell_data == "disable_key" and len(disable_dictionary["you"]) == 0:
-        letter = input_trap_letter("you")
+        letter = choose_letter()
         cast_trap(spell_data, "boss", letter)
         disable_dictionary["you"].append(letter)
     else:
-       valid = False
-       while not valid:
-           i = randint(0, len(possible_actions) - 1)
-           valid = check_disabled(spell_data, "boss")
-           spell_data = possible_actions[i]['Action']
-           check_trap(spell_data, "boss") #check si el spell tiene una letra trappeada
-           if list(prolog.query(f"warrior(boss, Health)"))[0]["Health"] <= 0:
-                return
-           cast_spell(spell_data, "boss")
-           valid = True
+        check_trap(spell_data, "boss")  # check si el spell tiene una letra trappeada
+        if list(prolog.query(f"warrior(boss, Health)"))[0]["Health"] <= 0:
+            return
+        cast_spell(spell_data, "boss")
+        update_letter_count(spell_data)
     return
-    
+
 def main():
     warriors = list(prolog.query(f"warrior(Warrior, Health)"))
     first_turn()
