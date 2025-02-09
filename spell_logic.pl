@@ -103,7 +103,7 @@ initialize_cooldowns :-
 
 update_cooldowns :-
     forall(current_cooldown(User, Spell, CD), (
-        (CD > 0 -> NewCD is CD - 1; cooldown(Spell, DefaultCD), NewCD is DefaultCD),
+        (CD > 0 -> NewCD is CD - 1; NewCD is 0),
         retract(current_cooldown(User, Spell, CD)),
         assertz(current_cooldown(User, Spell, NewCD))
     )).

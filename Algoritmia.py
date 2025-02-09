@@ -98,7 +98,7 @@ def handle_trap(spell_data, caster, target):
     
     if spell_data == "trap_key" and len(trap_dictionary[target]) < 2:
         cast_trap(spell_data, caster, letter)
-        trap_dictionary[target].append([letter])
+        trap_dictionary[target].append(letter)
         return True
     elif spell_data == "disable_key" and len(disable_dictionary[target]) == 0:
         cast_trap(spell_data, caster, letter)
@@ -328,6 +328,7 @@ def main():
         warriors = list(prolog.query(f"warrior(Warrior, Health)")) #actualizo vida de los jugadores
         print("Trapped keys:", trap_dictionary)
         print("Disabled keys:", disable_dictionary)
+        list(prolog.query("update_cooldowns."))
         if warriors[0]["Health"] > 0 and warriors[1]["Health"] > 0:
             user_turn()
             warriors = list(prolog.query(f"warrior(Warrior, Health)")) #actualizo vida de los jugadores
