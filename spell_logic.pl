@@ -7,6 +7,10 @@
 :- dynamic can_cast/2.
 :- dynamic secret/2.
 :- dynamic can_cast_trap/3. 
+:- dynamic current_cooldown/3.
+:- dynamic initialize_cooldowns/0.
+:- dynamic update_cooldowns/0.
+:- dynamic can_cast_spell/2.
 
 warrior(you,100).
 warrior(boss,100).
@@ -83,3 +87,33 @@ boss_choice(Spell, 0, 0, _, _) :-
     spell(Spell),
     Spell \= nuke,
     Spell \= heal.
+
+cooldown(fireball, 2).
+cooldown(ice, 3).
+cooldown(lightning, 4).
+cooldown(summon_frog, 5).
+cooldown(summon_dragon, 10).
+cooldown(nuke, 20).
+cooldown(heal, 3).
+cooldown(trap_key, 5).
+cooldown(disable_key, 10).
+
+initialize_cooldowns :-
+    forall(spell(Spell), (assertz(current_cooldown(you, Spell, 0)), assertz(current_cooldown(boss, Spell, 0)))).
+
+update_cooldowns :-
+    forall(current_cooldown(User, Spell, CD), (
+        (CD > 0 -> NewCD is CD - 1; cooldown(Spell, DefaultCD), NewCD is DefaultCD),
+        retract(current_cooldown(User, Spell, CD)),
+        assertz(current_cooldown(User, Spell, NewCD))
+    )).
+
+update_single_cooldown(User, Spell) :-
+    current_cooldown(User, Spell, CD),
+    (CD > 0 -> NewCD is CD - 1; cooldown(Spell, DefaultCD), NewCD is DefaultCD),
+    retract(current_cooldown(User, Spell, CD)),
+    assertz(current_cooldown(User, Spell, NewCD)).
+
+can_cast_spell(User, Spell) :-
+    current_cooldown(User, Spell, CD),
+    CD =:= 0.

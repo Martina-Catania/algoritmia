@@ -8,6 +8,7 @@ prolog.retract("warrior(you, Health)")
 prolog.retract("warrior(boss, Health)")
 prolog.assertz("warrior(you, 100)")
 prolog.assertz("warrior(boss, 100)")
+list(prolog.query("initialize_cooldowns."))
 
 trap_dictionary = {"you": [], "boss": []} #diccionario de trampas, se guardan en el formato {victima: [trap, letra]}
 disable_dictionary = {"you": [], "boss": []} #diccionario letras desactivadas, se guardan en el formato {victima: letra}
@@ -49,15 +50,30 @@ def end_game():
     else:
         print("YOU WON!")
 
-def load_spell_lists(user, visible_spells, secret_spells,traps):
+def load_spell_lists(user, visible_spells, secret_spells, traps):
     for spell in prolog.query(f"secret({user}, Spell)"):
         secret_spells.append(format_to_print(spell["Spell"]))
-    for spell in prolog.query("spell(Name)"):
-        if format_to_print(spell["Name"]) in secret_spells:
+    spells = list(prolog.query("spell(Name)"))
+    for spell in spells:
+        spell_name = format_to_print(spell["Name"])
+        if spell_name in secret_spells:
             continue
-        visible_spells.append(format_to_print(spell["Name"]))
+        visible_spells.append(spell_name)
     for trap in prolog.query("trap(Name)"):
         traps.append(format_to_print(trap["Name"]))
+
+def load_cooldowns(user, cooldowns):
+    spells = list(prolog.query("spell(Name)"))
+    for spell in spells:
+        spell_data = spell["Name"]
+        cooldown = list(prolog.query(f"current_cooldown({user}, {spell_data}, CD)"))[0]["CD"]
+        cooldowns[spell_data] = cooldown
+
+def update_cooldown(user, spell_data):
+    list(prolog.query(f"update_single_cooldown({user}, {spell_data})."))
+
+def can_cast_spell(user, spell_data):
+    return list(prolog.query(f"can_cast_spell({user}, {spell_data})"))
 
 def user_turn():
     print("YOUR TURN")
@@ -65,13 +81,15 @@ def user_turn():
     visible_spells = []
     secret_spells = []
     traps = []
-    load_spell_lists("you",visible_spells,secret_spells,traps)
+    cooldowns = {}
+    load_spell_lists("you", visible_spells, secret_spells, traps)
+    load_cooldowns("you", cooldowns)
 
     #loop hasta que el usuario seleccione un spell válido
     valid = False
     while(valid == False):
         print("\nCAST-------------------------------------------------------------------")
-        print("Known spells:", visible_spells)
+        print("Known spells:", [f"{spell} (CD: {cooldowns[format_to_prolog(spell)]})" for spell in visible_spells])
         print("Traps:", traps)
         print("Type HELP to check a spell's description or SKIP to skip your turn.\n")
         spell = input().upper()
@@ -100,11 +118,15 @@ def user_turn():
                 if spell in secret_spells:
                     print("Hey that's a secret!")
                     prolog.retract(f"secret(you, {spell_data})")
+                if not can_cast_spell("you", spell_data):
+                    print(f"{spell} is on cooldown!")
+                    continue
                 check_trap(spell_data, "you") #check si el spell tiene una letra trappeada
                 if list(prolog.query(f"warrior(you, Health)"))[0]["Health"] <= 0:
                     return
                 cast_spell(spell_data, "you")
                 update_letter_count(spell)
+                update_cooldown("you", spell_data)
                 valid = True
             else:
                 print("Invalid spell, try again!")
@@ -205,6 +227,7 @@ def cast_spell(spell_data,caster):
         print(f"{format_to_print(target)} health: {list(prolog.query(f'warrior({target}, Health)'))[0]['Health']}\n")
         if list(prolog.query(f"warrior({target}, Health)"))[0]["Health"] < 0:
             print(f"O V E R K I L L")
+    prolog.query(f"update_single_cooldown({caster}, {spell_data})")
 
 def cast_trap(trap_data, caster, letter):
     valid = False
@@ -260,7 +283,7 @@ def boss_turn():
         for letter in disable_dictionary["boss"]:
             if letter in spell_data:
                 return False
-        return True
+        return can_cast_spell("boss", spell_data)
 
     spell_data = None
     for action in possible_actions:
@@ -290,6 +313,7 @@ def boss_turn():
             return
         cast_spell(spell_data, "boss")
         update_letter_count(spell_data)
+        update_cooldown("boss", spell_data)
     return
 
 def main():
