@@ -15,7 +15,6 @@ disable_dictionary = {"you": [], "boss": []} #diccionario letras desactivadas, s
 mostCommonLetters = {chr(i): 0 for i in range(97, 123)}  # Diccionario para contar letras a-z
 
 def update_letter_count(string):
-    print(f"Updating letter count for: {string}")
     for char in string.lower():
         if char in mostCommonLetters:
             mostCommonLetters[char] += 1
@@ -77,11 +76,10 @@ def can_cast_spell(user, spell_data):
 
 def choose_letter():
     sorted_letters = sorted(mostCommonLetters.items(), key=lambda item: item[1], reverse=True)
-    print(mostCommonLetters)
+    #print(mostCommonLetters)
     for letter, _ in sorted_letters:
-        print(f"{letter}: {mostCommonLetters[letter]}")
-        if letter not in [item[1] for item in trap_dictionary["you"]] and letter not in disable_dictionary["you"]:
-            print(f"Choose {letter} to cast a spell with this letter.")
+        if letter not in trap_dictionary["you"] and letter not in disable_dictionary["you"]:
+            #print(f"Choose {letter} to cast a spell with this letter.")
             return letter
     
     # return chr(randint(97, 122))  # if all letters are used, choose a random letter
@@ -100,7 +98,7 @@ def handle_trap(spell_data, caster, target):
     
     if spell_data == "trap_key" and len(trap_dictionary[target]) < 2:
         cast_trap(spell_data, caster, letter)
-        trap_dictionary[target].append([spell_data, letter])
+        trap_dictionary[target].append([letter])
         return True
     elif spell_data == "disable_key" and len(disable_dictionary[target]) == 0:
         cast_trap(spell_data, caster, letter)
@@ -253,8 +251,6 @@ def cast_spell(spell_data,caster):
     prolog.query(f"update_single_cooldown({caster}, {spell_data})")
 
 def cast_trap(trap_data, caster, letter):
-    valid = False
-    #trap_data = format_to_prolog(trap)
     target = list(prolog.query(f"target({trap_data}, {caster}, Target)"))[0]["Target"]
     print(f"{format_to_print(caster)} casted {format_to_print(trap_data)} on letter {letter.upper()}\n")
 
@@ -276,7 +272,7 @@ def check_trap(spell_data, caster):
             if list(prolog.query(f"warrior({caster}, Health)"))[0]["Health"] <= 0:
                 print(f"Did {caster} just die to a trap?\n")
 
-def boss_turn():
+def boss_turn(show_boss_logic):
     print("BOSS' TURN")
     is_1_hp = int(bool(list(prolog.query("is_one_hp(boss)"))))
     can_die = int(bool(list(prolog.query("can_die(boss)"))))
@@ -285,21 +281,22 @@ def boss_turn():
 
     #is boss one hp?
     is_1_hp = int(bool(list(prolog.query("is_one_hp(boss)"))))
-    print(f"Boss is at 1 hp: {is_1_hp}")
     #can boss die to any spells next turn?
     can_die = int(bool(list(prolog.query("can_die(boss)"))))
-    print(f"Boss can die next turn: {can_die}")
     #does the boss have 2 active traps?
     at_trap_limit = int(len(trap_dictionary["you"]) == 2)
-    print(f"Boss is at trap limit: {at_trap_limit}")
     #has the boss disabled a letter already?
     has_disabled = int(len(disable_dictionary["you"]) == 1)
-    print(f"Boss has disabled a letter: {has_disabled}")
-
-
-    print("BOSS' CHOICE")
     possible_actions = list(prolog.query(f"boss_choice(Action,{is_1_hp}, {can_die}, {at_trap_limit}, {has_disabled})"))
-    print(possible_actions)
+    if show_boss_logic:
+        print(f"Boss is at 1 hp: {is_1_hp}")
+        print(f"Boss can die next turn: {can_die}")
+        print(f"Boss is at trap limit: {at_trap_limit}")
+        print(f"Boss has disabled a letter: {has_disabled}")
+        print("BOSS' CHOICE")
+        print(possible_actions)
+    
+    possible_actions = list(prolog.query(f"boss_choice(Action,{is_1_hp}, {can_die}, {at_trap_limit}, {has_disabled})"))
     
     spell_data = None
     for action in possible_actions:
@@ -319,10 +316,15 @@ def boss_turn():
 
 def main():
     warriors = list(prolog.query(f"warrior(Warrior, Health)"))
+
+    show_boss_logic = False
+    if input("Show boss' logic? (Yes/No): ").lower() == 'yes':
+        show_boss_logic = True
+
     first_turn()
     warriors = list(prolog.query(f"warrior(Warrior, Health)")) #actualizo vida de los jugadores
     while warriors[0]["Health"] > 0 and warriors[1]["Health"] > 0:
-        boss_turn()
+        boss_turn(show_boss_logic)
         warriors = list(prolog.query(f"warrior(Warrior, Health)")) #actualizo vida de los jugadores
         print("Trapped keys:", trap_dictionary)
         print("Disabled keys:", disable_dictionary)
