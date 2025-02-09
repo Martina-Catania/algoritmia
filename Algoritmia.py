@@ -110,7 +110,7 @@ def handle_trap(spell_data, caster, target):
 
 def handle_cast(spell_data, caster):
     if not is_valid_spell(spell_data, caster):
-        print(f"{format_to_print(spell_data)} is on cooldown or disabled!")
+        print(f"{format_to_print(spell_data)} is on cooldown or contains a disabled letter!")
         return False
     check_trap(spell_data, caster)
     if list(prolog.query(f"warrior({caster}, Health)"))[0]["Health"] <= 0:
@@ -145,14 +145,14 @@ def user_turn():
             valid = True
         elif spell in traps:
             valid = handle_trap(spell_data, "you", "boss")
-        elif not check_disabled(spell_data, "you"):
-            if spell in visible_spells or spell in secret_spells:
-                if spell in secret_spells:
-                    print("Hey that's a secret!")
-                    prolog.retract(f"secret(you, {spell_data})")
-                valid = handle_cast(spell_data, "you")
-            else:
-                print("Invalid spell, try again!")
+        # elif not check_disabled(spell_data, "you"):
+        elif spell in visible_spells or spell in secret_spells:
+            if spell in secret_spells:
+                print("Hey that's a secret!")
+                prolog.retract(f"secret(you, {spell_data})")
+            valid = handle_cast(spell_data, "you")
+        else:
+            print("Invalid spell, try again!")
     return
 
 def input_trap_letter(target):
