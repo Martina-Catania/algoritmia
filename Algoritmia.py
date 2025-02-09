@@ -258,14 +258,14 @@ def check_trap(spell_data, caster):
     #spell_data = format_to_prolog(spell)
     #check si el spell tiene una letra trappeada
     for trap in trap_dictionary[caster]:
-        if trap[0] == "trap_key" and trap[1] in spell_data: #si el spell tiene una letra trappeada
-            damage = list(prolog.query(f"damage_range({trap[0]}, Min, Max)"))[0]["Min"] * spell_data.count(trap[1])
+        if trap in spell_data: #si el spell tiene una letra trappeada
+            damage = list(prolog.query(f"damage_range(trap_key, Min, Max)"))[0]["Min"] * spell_data.count(trap)
             #query vida actual
             current_health = list(prolog.query(f"warrior({caster}, Health)"))[0]["Health"]
             #actualizo vida del objetivo e imprimo
             prolog.retract(f"warrior({caster}, {current_health})")
             prolog.assertz(f"warrior({caster}, {current_health - damage})")
-            print(f"The letter {format_to_print(trap[1])} was trapped!")
+            print(f"The letter {format_to_print(trap)} was trapped!")
             print(f"Dealt {damage} damage to {format_to_print(caster)}")
             print(f"{format_to_print(caster)} health: {list(prolog.query(f'warrior({caster}, Health)'))[0]['Health']}\n")
             trap_dictionary[caster].remove(trap)
